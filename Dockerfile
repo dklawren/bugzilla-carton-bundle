@@ -5,11 +5,23 @@
 # This Source Code Form is "Incompatible With Secondary Licenses", as
 # defined by the Mozilla Public License, v. 2.0.
 
-FROM centos:6
+FROM centos:centos6
 
-RUN yum -y -q update && \
-    yum -y -q groupinstall  "Development Tools" && \
-    yum -y -q install perl-core gd-devel expat-devel httpd-devel mysql-devel ImageMagick-perl
+RUN yum -y -q update \
+    && yum -y -q install https://dev.mysql.com/get/mysql-community-release-el6-5.noarch.rpm epel-release \
+    && yum -y -q groupinstall  "Development Tools" \
+    && yum -y -q install \
+            expat-devel \
+            gd-devel \
+            gmp-devel \
+            httpd-devel \
+            mod_perl \
+            mysql-community-devel \
+            mysql-community-server \
+            openssl \
+            openssl-devel \
+            perl-core \
+    && yum -q clean all
 
 ADD https://raw.github.com/tokuhirom/Perl-Build/master/perl-build /usr/local/bin/perl-build
 ADD https://raw.githubusercontent.com/miyagawa/cpanminus/master/cpanm /usr/local/bin/cpanm
@@ -25,20 +37,20 @@ RUN $PERL /usr/local/bin/cpanm Carton App::FatPacker File::pushd
 ENV CARTON $PERL_DIR/bin/carton
 
 COPY bugzilla/ /opt/bugzilla/
+WORKDIR /opt/bugzilla
 
-RUN cd /opt/bugzilla && \
-    git clean -df && \
-    $PERL Makefile.PL && \
-    make cpanfile GEN_CPANFILE_ARGS='-A -U pg -U oracle -U mod_perl'  && \
-    $CARTON install && \
-    $CARTON bundle && \
-    $CARTON fatpack && \
-    rm -vfr local/lib/perl5
+RUN git clean -df \
+    && $PERL Makefile.PL \
+    && make cpanfile GEN_CPANFILE_ARGS='-A -U auth_ldap -U auth_radius -U psgi -U inbound_email -U moving -U sqlite -U update -U pg -U oracle -U smtp_auth' \
+    && $CARTON install \
+    && $CARTON bundle --cached \
+    && $CARTON fatpack \
+    && rm -vfr local
 
 # Now install to the system perl
-RUN cd /opt/bugzilla && ./vendor/bin/carton install -cached --deployment
+RUN vendor/bin/carton install --cached --deployment
 
 # And run tests
-RUN cd /opt/bugzilla && prove -I local/lib/perl5 t
-RUN rpm -qa > /opt/bugzilla/RPM_LIST
-RUN cd /opt/bugzilla && tar -zcf /vendor.tar.gz RPM_LIST cpanfile cpanfile.snapshot vendor
+#RUN prove -Ilocal/lib/perl5 t
+RUN rpm -qa > RPM_LIST
+RUN tar zcf /vendor.tar.gz RPM_LIST cpanfile cpanfile.snapshot vendor

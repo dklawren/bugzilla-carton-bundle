@@ -5,7 +5,7 @@ if [[ ! -d bugzilla || ! -f bugzilla/Makefile.PL ]]; then
     exit 1
 fi
 
-docker build -t bmo:latest .
-docker rm bmo
-docker run --name bmo bmo:latest
-docker cp bmo:/vendor.tar.gz .
+docker build -t carton:latest .
+docker rm carton
+docker run --name carton carton:latest
+docker cp carton:/vendor.tar.gz .
